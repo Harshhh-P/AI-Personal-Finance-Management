@@ -227,3 +227,4 @@ ml/datasets/raw/*
 ml/datasets/processed/*
 
 .ipynb_checkpoints/
+.env
