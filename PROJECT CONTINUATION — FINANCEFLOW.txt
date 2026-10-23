@@ -1,0 +1,1263 @@
+PROJECT CONTINUATION — FINANCEFLOW
+==================================
+
+I am a 3rd-year Data Science / Analytics student at Ramdeobaba University, Nagpur.
+
+I am working on my college group project:
+
+PROJECT NAME:
+FinanceFlow — AI-Based Personal Finance Management System
+
+IMPORTANT:
+- Application development is being done in VS Code.
+- Colab was only used for EDA and ML model training.
+- DO NOT create a new Colab notebook unless I explicitly ask.
+- If a new Colab notebook is ever needed, remind me BEFORE creating it and clearly state the notebook name + purpose.
+- I prefer beginner-friendly, simple-English, step-by-step guidance.
+- When I ask for code replacement, give COMPLETE files rather than small fragments.
+- Keep the project practical and suitable for a college project.
+- Do not unnecessarily complicate the architecture.
+
+
+==================================================
+1. PROJECT GOAL
+==================================================
+
+FinanceFlow is a personal finance management web application.
+
+Main purpose:
+- User registration/login
+- Add financial transactions
+- Import transactions through CSV
+- Store transactions in MySQL
+- Dashboard with financial summaries
+- Monthly income/expense analytics
+- Category-wise spending analytics
+- Anomaly / unusual spending alerts
+- AI-based monthly expense prediction
+- Future budget tracking
+- Clean modern dashboard
+
+Overall flow:
+
+Register / Login
+       ↓
+Dashboard
+       ↓
+Add Transaction / Import CSV
+       ↓
+MySQL Database
+       ↓
+Analytics
+       ↓
+ML Expense Prediction
+       ↓
+Insights / Alerts
+
+
+==================================================
+2. PROJECT FOLDER STRUCTURE
+==================================================
+
+Current project root:
+
+AI-Personal-Finance-Management/
+
+├── backend/
+│   ├── app.py
+│   └── README.md
+│
+├── frontend/
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
+│
+├── ml/
+│
+├── .env
+├── .gitignore
+├── requirements.txt
+└── README.md
+
+
+==================================================
+3. ML / COLAB STATUS
+==================================================
+
+Existing Colab notebooks:
+
+1. 01_EDA_Preprocessing (1).ipynb
+2. 02_Model_Training_Evaluation (1).ipynb
+
+Raw dataset:
+Kaggle Personal Finance Dataset — around 1500 rows.
+
+Original columns:
+
+Date
+Transaction Description
+Category
+Amount
+Type
+
+
+EDA results:
+
+- Rows: 1500
+- Expense: 1222
+- Income: 278
+
+Categories:
+
+Rent: 165
+Travel: 160
+Utilities: 157
+Health & Fitness: 152
+Shopping: 150
+Food & Drink: 149
+Salary: 146
+Entertainment: 143
+Investment: 142
+Other: 136
+
+Dates:
+
+First date: 2020-01-02
+Last date: 2024-12-29
+Unique dates: 1025
+Invalid dates: 0
+Missing dates: 0
+dtype: datetime64[ns]
+
+Amount:
+
+Overall mean ≈ 1307.52
+Median ≈ 1156.29
+Maximum ≈ 4996
+
+Expense:
+
+Mean ≈ 1004.25
+Maximum ≈ 1999.82
+
+Income:
+
+Mean ≈ 2640.60
+Maximum ≈ 4996
+
+
+==================================================
+4. ML DATA PREPARATION
+==================================================
+
+Monthly aggregation:
+
+60 months from 2020-01 to 2024-12.
+
+ML-ready dataset shape:
+
+57 rows × 13 columns
+
+Columns:
+
+Year_Month
+Total_Expense
+Transaction_Count
+Average_Expense
+Max_Expense
+Min_Expense
+Year
+Month
+Previous_Month_Expense
+Expense_2_Months_Ago
+Expense_3_Months_Ago
+Previous_Transaction_Count
+Three_Month_Avg_Expense
+
+ML features X:
+
+Year
+Month
+Previous_Month_Expense
+Expense_2_Months_Ago
+Expense_3_Months_Ago
+Previous_Transaction_Count
+Three_Month_Avg_Expense
+
+Target:
+
+Total_Expense
+
+Time split:
+
+Training = 45 months
+2020-04 to 2023-12
+
+Testing = 12 months
+2024-01 to 2024-12
+
+
+Processed file:
+
+/content/drive/MyDrive/AI-Personal-Finance-Management/ml/datasets/processed/monthly_expenses_ml_ready.csv
+
+
+==================================================
+5. MODEL RESULTS
+==================================================
+
+Latest results:
+
+Linear Regression:
+MAE  = 5003.474
+MSE  = 32202941
+RMSE = 5674.764
+R²   = -0.16577
+
+Random Forest:
+MAE  = 4201.292
+MSE  = 25631691
+RMSE = 5062.775
+R²   = 0.072118
+
+Gradient Boosting:
+MAE  = 4130.444
+MSE  = 26149854
+RMSE = 5113.693
+R²   = 0.05336
+
+LSTM:
+MAE  = 4780.187
+MSE  = 32389537
+RMSE = 5691.181
+R²   = -0.17252
+
+IMPORTANT:
+Do NOT say Random Forest is best on every metric.
+
+Gradient Boosting has slightly lower MAE.
+
+Random Forest has:
+- lower RMSE
+- lower MSE
+- higher R²
+
+So Random Forest is currently the selected model for the application because of its overall evaluation across the main metrics, but this should be explained accurately.
+
+
+==================================================
+6. SAVED ML MODEL
+==================================================
+
+Saved model:
+
+/content/drive/MyDrive/AI-Personal-Finance-Management/ml/models/random_forest_expense_model.pkl
+
+Saved feature list:
+
+/content/drive/MyDrive/AI-Personal-Finance-Management/ml/models/model_features.pkl
+
+
+==================================================
+7. LSTM
+==================================================
+
+LSTM setup:
+
+Total observations: 57
+Training: 45
+Testing: 12
+Lookback: 3
+
+Scaled train/test:
+45 / 12
+
+LSTM training input:
+42 × 3 × 1
+
+Architecture:
+
+LSTM(50)
+Dense(1)
+
+Parameters:
+10,451
+
+Epochs:
+50
+
+LSTM is being used as a comparison model, not necessarily the production model.
+
+
+==================================================
+8. ML APPLICATION LOGIC
+==================================================
+
+Expense prediction is REGRESSION.
+
+Metrics:
+
+MAE
+MSE
+RMSE
+R²
+
+Do NOT use classification accuracy for expense prediction.
+
+Cold-start concept:
+
+0 transactions:
+→ Do not generate prediction.
+
+1–2 months:
+→ Use basic historical/baseline estimate.
+
+3+ months:
+→ Use Random Forest prediction when enough valid monthly features exist.
+
+Do NOT scrape UPI.
+
+Do NOT ask users for:
+- UPI PIN
+- bank password
+- OTP
+
+For the college project:
+- Manual transaction entry
+- CSV import
+
+
+==================================================
+9. MYSQL DATABASE
+==================================================
+
+MySQL 8.0 and MySQL Workbench are installed and connected.
+
+Database already created.
+
+TABLE: users
+
+Columns:
+
+id
+INT AUTO_INCREMENT PRIMARY KEY
+
+name
+VARCHAR(100) NOT NULL
+
+email
+VARCHAR(150) UNIQUE NOT NULL
+
+password_hash
+VARCHAR(255) NOT NULL
+
+created_at
+TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+
+Created with:
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+==================================================
+10. TRANSACTIONS TABLE
+==================================================
+
+Current structure:
+
+id
+INT AUTO_INCREMENT PRIMARY KEY
+
+Date
+DATE
+
+Amount
+DECIMAL(10,2)
+
+Category
+VARCHAR(100)
+
+Description
+VARCHAR(255)
+
+Type
+VARCHAR(50)
+
+user_id
+INT NOT NULL
+
+Foreign key:
+
+user_id → users(id)
+
+ON DELETE CASCADE
+
+
+Current structure was created using:
+
+ALTER TABLE transactions
+ADD COLUMN user_id INT;
+
+UPDATE transactions
+SET user_id = 1;
+
+SELECT COUNT(*) AS unassigned_transactions
+FROM transactions
+WHERE user_id IS NULL;
+
+ALTER TABLE transactions
+MODIFY user_id INT NOT NULL;
+
+ALTER TABLE transactions
+ADD CONSTRAINT fk_transactions_user
+FOREIGN KEY (user_id)
+REFERENCES users(id)
+ON DELETE CASCADE;
+
+
+==================================================
+11. IMPORTANT DATABASE SECURITY
+==================================================
+
+Backend uses:
+
+Werkzeug:
+generate_password_hash()
+check_password_hash()
+
+Do not rely on the old demo user's plain-text password_hash.
+
+There is an old demo user:
+
+email:
+demo@example.com
+
+password:
+temporary_password
+
+BUT:
+the database entry contains a temporary plain-text value and should NOT be treated as a valid secure login account.
+
+For testing, use the frontend-created account below.
+
+
+==================================================
+12. TEST USER
+==================================================
+
+Frontend test account:
+
+Email:
+frontendtest@example.com
+
+Password:
+Frontend@123
+
+This account successfully worked through the frontend/backend authentication flow.
+
+
+==================================================
+13. CURRENT TEST TRANSACTION
+==================================================
+
+Keep this transaction unless I explicitly ask to delete it:
+
+User ID:
+2
+
+Transaction ID:
+1505
+
+Date:
+2026-09-24
+
+Amount:
+250
+
+Category:
+Food & Drink
+
+Description:
+Lunch
+
+Type:
+Expense
+
+
+==================================================
+14. BACKEND
+==================================================
+
+Backend:
+
+backend/app.py
+
+Technology:
+
+Flask
+Flask-CORS
+Flask sessions
+Werkzeug password hashing
+PyMySQL
+joblib
+
+Backend runs at:
+
+http://127.0.0.1:5000
+
+
+Run command:
+
+python backend/app.py
+
+
+==================================================
+15. BACKEND API ENDPOINTS
+==================================================
+
+GET /
+
+GET /model-info
+
+POST /register
+
+POST /login
+
+POST /logout
+
+GET /me
+
+POST /predict
+
+POST /transactions
+
+GET /transactions
+
+POST /transactions/import-csv
+
+GET /summary
+
+GET /analytics/monthly
+
+GET /analytics/category
+
+GET /analytics/anomalies
+
+
+==================================================
+16. AUTHENTICATION
+==================================================
+
+Authentication uses Flask signed sessions.
+
+Frontend requests use:
+
+credentials: "include"
+
+Backend has:
+
+CORS(..., supports_credentials=True)
+
+After login:
+
+session stores user_id.
+
+All transaction queries use the logged-in user's user_id.
+
+No hardcoded user_id should be used for normal application operations.
+
+
+==================================================
+17. BACKEND TESTS THAT PASSED
+==================================================
+
+Registration worked.
+
+Example:
+
+201
+{
+    'message': 'Registration successful',
+    'user': {
+        'email': 'testuser@example.com',
+        'id': 2,
+        'name': 'Test User'
+    }
+}
+
+
+Login worked.
+
+Session cookie was created.
+
+
+/me worked.
+
+
+/transactions initially returned:
+
+{
+    "count": 0,
+    "transactions": []
+}
+
+
+Adding transaction worked:
+
+{
+    "message": "Transaction added successfully!",
+    "transaction": {
+        "amount": 250.0,
+        "category": "Food & Drink",
+        "date": "2026-09-24",
+        "description": "Lunch",
+        "id": 1505,
+        "type": "Expense",
+        "user_id": 2
+    }
+}
+
+
+/summary worked:
+
+balance: -250
+total_expense: 250
+total_income: 0
+transaction_count: 1
+
+
+/analytics/monthly worked.
+
+
+/analytics/category worked.
+
+
+/model-info worked.
+
+
+/predict worked when supplied with valid authenticated data, although the resulting prediction value is not realistic enough to evaluate model quality. The endpoint integration itself works.
+
+
+==================================================
+18. ANOMALY DETECTION
+==================================================
+
+Endpoint:
+
+GET /analytics/anomalies
+
+Logic:
+
+- Only current user's expense transactions
+- Requires at least 3 expense transactions
+- Calculate:
+  mean + 2 × standard deviation
+- Transactions above this threshold are marked as anomalies.
+
+Returned information includes:
+
+id
+date
+amount
+category
+description
+threshold
+reason
+
+If fewer than 3 expenses:
+
+"Not enough expense data for anomaly detection."
+
+
+==================================================
+19. CSV IMPORT
+==================================================
+
+Endpoint:
+
+POST /transactions/import-csv
+
+Uses multipart/form-data.
+
+Frontend must send:
+
+FormData
+file = selected CSV
+
+DO NOT manually set Content-Type when sending FormData.
+
+
+Expected CSV:
+
+Date,Transaction Description,Category,Amount,Type
+
+Example:
+
+Date,Transaction Description,Category,Amount,Type
+2026-09-20,Coffee,Food & Drink,120,Expense
+2026-09-21,Bus Travel,Travel,80,Expense
+2026-09-22,Freelance Payment,Salary,3000,Income
+
+
+Backend:
+- accepts .csv
+- handles UTF-8-sig
+- validates headers
+- validates date
+- validates amount
+- rejects negative amounts
+- normalizes Type to Expense/Income
+- supports Description or Transaction Description
+- inserts rows using current logged-in user's user_id
+- commits valid rows
+- rolls back on DB error
+
+Response example:
+
+{
+    "message": "CSV imported successfully.",
+    "inserted_count": 3,
+    "skipped_rows": 0,
+    "total_rows": 3,
+    "user_id": 2
+}
+
+
+==================================================
+20. FRONTEND
+==================================================
+
+Frontend folder:
+
+frontend/
+
+Files:
+
+index.html
+style.css
+script.js
+
+Frontend runs using:
+
+python -m http.server 8000 --directory frontend
+
+URL:
+
+http://127.0.0.1:8000
+
+Port 5500 previously caused:
+
+PermissionError: [WinError 10013]
+
+Therefore use port 8000.
+
+
+==================================================
+21. FRONTEND DESIGN
+==================================================
+
+Brand name:
+
+FinanceFlow
+
+IMPORTANT:
+Use FinanceFlow.
+Do NOT rename it.
+
+Design:
+
+- Premium black/white aesthetic
+- Near-black background
+- Dark gray cards
+- White text
+- Subtle gray borders
+- White buttons with black text
+- Monochrome charts
+- Rounded corners
+- Subtle shadows
+- Clean minimal dashboard
+- Responsive
+- Professional college-project look
+
+Login page:
+- Centered authentication card
+- FinanceFlow branding
+- Login/register forms
+
+
+==================================================
+22. DASHBOARD SECTIONS
+==================================================
+
+Main dashboard should contain:
+
+1. Overview Cards
+
+- Total Income
+- Total Expense
+- Balance
+- Transactions
+
+
+2. Financial Insights
+
+- Monthly trend chart
+- Year slicer
+- Month slicer
+- View slicer
+
+IMPORTANT:
+THE SLICERS MUST BE PRESENT.
+
+The slicer was accidentally removed in an earlier frontend replacement.
+
+Restore:
+
+Year
+Month
+View
+
+These should control/filter the dashboard analytics where appropriate.
+
+
+3. Spending by Category
+
+Category chart.
+
+
+4. Financial Summary
+
+- Total
+- Average
+- Highest
+- Monthly Change
+
+
+5. Smart Spending Alerts
+
+Use anomaly detection results.
+
+
+6. AI Expense Forecast
+
+Show predicted monthly expense.
+
+IMPORTANT:
+Do NOT automatically call /predict with empty data.
+
+Previous error:
+
+POST http://127.0.0.1:5000/predict
+400 BAD REQUEST
+
+Error:
+"Prediction data is required."
+
+Cause:
+Frontend was calling /predict without valid prediction data.
+
+Fix:
+Only call /predict when valid features can be constructed.
+
+Otherwise show something like:
+
+"Add more transaction data to generate your forecast."
+
+Do NOT let the prediction error break the dashboard.
+
+
+7. Recent Transactions
+
+Show recent transactions.
+
+Include:
+- Date
+- Description
+- Category
+- Amount
+- Type
+
+Also include:
+
+Add Transaction button.
+
+
+==================================================
+23. ADD TRANSACTION MODAL
+==================================================
+
+Button:
+
+id="open-transaction-modal"
+
+Modal:
+
+id="transaction-modal"
+
+Close:
+
+id="close-transaction-modal"
+
+Tabs:
+
+manual-tab
+csv-tab
+
+Panels:
+
+manual-transaction-panel
+csv-transaction-panel
+
+Manual form:
+
+transaction-form
+
+CSV:
+
+csv-file
+selected-csv-file
+csv-message
+import-csv-button
+
+Buttons:
+
+cancel-transaction
+cancel-csv
+
+
+Modal should support:
+
+1. Manual transaction entry
+2. CSV import
+
+
+==================================================
+24. MODAL DESIGN CLASSES
+==================================================
+
+Use/support:
+
+.modal-overlay
+.transaction-modal
+.modal-header
+.modal-close
+.transaction-tabs
+.transaction-tab
+.transaction-modal-panel
+.modal-form-grid
+.csv-upload-box
+.csv-icon
+.csv-format
+.file-select-button
+.selected-file
+.modal-actions
+
+
+==================================================
+25. REQUIRED FRONTEND IDs
+==================================================
+
+Authentication:
+
+login-form
+register-form
+login-email
+login-password
+register-name
+register-email
+register-password
+auth-message
+app-section
+
+User:
+
+user-name
+user-email
+
+Dashboard:
+
+total-income
+total-expense
+balance
+transaction-count
+
+Financial summary:
+
+summary-total
+summary-average
+summary-highest
+summary-change
+
+Charts:
+
+monthly-chart
+category-chart
+
+Alerts:
+
+anomaly-alerts
+
+Prediction:
+
+predicted-expense
+
+Transactions:
+
+transactions-body
+
+
+==================================================
+26. CURRENT FRONTEND PROBLEM
+==================================================
+
+There was a previous frontend error:
+
+T http://127.0.0.1:5000/predict 400 (BAD REQUEST)
+
+Error:
+
+Prediction data is required.
+
+Stack:
+
+apiRequest
+loadPrediction
+loadDashboard
+checkAuth
+
+
+Then frontend code was replaced and the login screen became invisible.
+
+The current frontend needs a CLEAN, CONSISTENT REBUILD if we decide to replace it.
+
+If generating new frontend code, provide COMPLETE:
+
+frontend/index.html
+frontend/style.css
+frontend/script.js
+
+Make sure all IDs/classes match between all three files.
+
+
+==================================================
+27. IMPORTANT PREDICTION FEATURES
+==================================================
+
+The Random Forest model expects:
+
+Year
+Month
+Previous_Month_Expense
+Expense_2_Months_Ago
+Expense_3_Months_Ago
+Previous_Transaction_Count
+Three_Month_Avg_Expense
+
+Likely prediction payload structure is based on these features, BUT:
+
+Before changing backend prediction logic, verify the actual current backend /predict implementation.
+
+Do not invent a new payload schema if the actual app.py can be checked.
+
+If valid monthly data is unavailable:
+do not call /predict.
+
+
+==================================================
+28. CURRENT FRONTEND JS ARCHITECTURE
+==================================================
+
+script.js should handle:
+
+- API URL
+- login
+- registration
+- logout
+- checkAuth
+- /me
+- dashboard loading
+- summary
+- transactions
+- add transaction
+- monthly analytics
+- category analytics
+- anomaly alerts
+- prediction
+- modal open/close
+- manual/CSV tabs
+- CSV file selection
+- CSV import
+- dashboard refresh
+- chart rendering
+- slicers
+- responsive UI behavior
+
+
+API URL:
+
+const API_URL = "http://127.0.0.1:5000";
+
+
+For normal JSON requests:
+
+credentials: "include"
+
+
+For CSV:
+
+const formData = new FormData();
+formData.append("file", file);
+
+fetch(
+    `${API_URL}/transactions/import-csv`,
+    {
+        method: "POST",
+        credentials: "include",
+        body: formData
+    }
+);
+
+Do NOT set:
+
+Content-Type: application/json
+
+for FormData.
+
+
+==================================================
+29. NEW FEATURES WE DISCUSSED
+==================================================
+
+We want FinanceFlow to feel like a complete finance application rather than just a basic CRUD project.
+
+Potential additions:
+
+1. FinanceFlow branding
+2. Year / Month / View slicers
+3. Budget Tracking
+4. Spending Insights
+5. Smart Alerts
+6. AI Expense Forecast
+7. Transaction search/filter
+8. Transaction delete
+9. Category visualization
+10. Financial health indicators
+11. Expense-to-income ratio
+12. Better empty states
+
+BUT:
+
+Do not overload the application.
+
+Prioritize a polished and working core application first.
+
+Recommended current priority:
+
+1. Fix frontend completely
+2. Restore FinanceFlow branding
+3. Restore slicers
+4. Fix prediction 400 issue
+5. Make dashboard stable
+6. Make manual transaction work
+7. Make CSV import work
+8. Make charts work
+9. Make anomaly alerts work
+10. Then add Budget Tracking / additional features
+
+
+==================================================
+30. CURRENT DEVELOPMENT APPROACH
+==================================================
+
+We should work in this order:
+
+BACKEND:
+Already mostly complete and tested.
+
+FRONTEND:
+Needs a clean synchronized implementation.
+
+When replacing frontend:
+Give all three files:
+
+1. index.html
+2. style.css
+3. script.js
+
+Then tell me exactly:
+
+- Which file to open
+- Ctrl+A
+- Paste
+- Save
+- Restart frontend server if needed
+- Refresh browser
+- Login using test account
+- What to test
+
+
+==================================================
+31. IMPORTANT TEST ACCOUNT
+==================================================
+
+Use:
+
+Email:
+frontendtest@example.com
+
+Password:
+Frontend@123
+
+
+==================================================
+32. TEST CSV
+==================================================
+
+Use this if CSV testing is needed:
+
+Date,Transaction Description,Category,Amount,Type
+2026-09-20,Coffee,Food & Drink,120,Expense
+2026-09-21,Bus Travel,Travel,80,Expense
+2026-09-22,Freelance Payment,Salary,3000,Income
+
+
+==================================================
+33. WHAT I WANT FROM THE NEXT CHAT
+==================================================
+
+Continue directly from this state.
+
+Do NOT restart the project explanation.
+
+Do NOT recreate the database unless something is actually broken.
+
+Do NOT create a new Colab notebook.
+
+Remember:
+
+- Project name = FinanceFlow
+- VS Code = application development
+- Colab = ML/EDA only
+- Flask = backend
+- MySQL = database
+- HTML/CSS/JS = frontend
+- Random Forest = selected ML model
+- LSTM = comparison model
+- Expense prediction = regression
+- Year/Month/View slicers MUST be restored
+- Prediction must not be called with empty data
+- Login screen must remain visible and functional
+- Dashboard must not become a black/blank screen
+- Existing backend functionality should be preserved
+- Existing user-specific transaction filtering should be preserved
+- Existing CSV import should be preserved
+- Existing anomaly detection should be preserved
+
+The immediate goal is to build a stable, polished FinanceFlow frontend that correctly connects to the existing Flask backend and MySQL database.

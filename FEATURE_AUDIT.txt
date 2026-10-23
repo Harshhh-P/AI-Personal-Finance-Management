@@ -1,0 +1,37 @@
+FINANCEFLOW STATIC FEATURE AUDIT
+
+CHECKED
+- Backend Python syntax: PASS (python -m py_compile backend/app.py)
+- Frontend JavaScript syntax: PASS (node --check frontend/script.js)
+- Frontend HTML IDs: PASS (95 IDs, no duplicates)
+- JavaScript literal DOM references: PASS (no referenced IDs missing from index.html)
+- Sidebar/navigation anchors: PASS (no broken anchors)
+- Backend route definitions: 29, including login, registration, transactions, analytics, reports, budgets, savings goals, and the new month-comparison endpoint
+- Frontend static server smoke test: PASS; index.html, style.css, and script.js returned HTTP 200
+- API base URL: http://127.0.0.1:5000
+- Frontend URL: http://127.0.0.1:8000
+- Database health endpoint added: http://127.0.0.1:5000/health
+
+PRESERVED FEATURES FOUND IN THIS UPLOADED PROJECT
+- Register/login/logout and session-based user authentication
+- Add, list, edit, delete, search/filter, and CSV import transactions
+- Summary cards and monthly/yearly/category/daily analytics
+- Expense prediction using the saved model, if its files/dependencies load correctly
+- Anomaly detection and avoidable-spending suggestions
+- PDF financial report
+- Monthly budgets and savings goals/contributions
+
+ADDED
+- Login accepts registered name or email, with password. No schema migration is needed; the existing `users.name` column is used as the username. If account names are duplicated, use email.
+- Month-over-month spending comparison by category with totals, percentage changes, and largest increase/decrease.
+- Windows start scripts and a MySQL/API health endpoint.
+- Responsive horizontal navigation on mobile.
+
+NOT VERIFIED END-TO-END HERE
+The sandbox does not have Flask installed and cannot access the user's local MySQL service or `.env` credentials. Therefore the live login, SQL queries, report download, predictions, and user-specific feature flows still need to be tested on the user's PC. Use `/health`; it should return HTTP 200 and `"database":"connected"` before testing login.
+
+NOT PRESENT IN THE UPLOADED SOURCE ZIP
+A feature named "Purchase Affordability Simulator" was not found in the uploaded HTML, JavaScript, or backend. It was not removed by this update; it was absent in the provided source archive. No What-If Simulator was added.
+
+SECURITY / REPLACEMENT
+This ZIP intentionally excludes `.env` and `.git`. Keep the existing `.env` file in your project folder and do not overwrite it.

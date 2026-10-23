@@ -1,0 +1,30 @@
+FINANCEFLOW - STARTUP AND REPLACEMENT NOTES
+
+IMPORTANT: Keep your existing .env file. It contains your local MySQL connection settings and must not be replaced by this update ZIP.
+
+START THE APP (EASIEST WAY)
+1. Stop any old FinanceFlow backend/frontend terminals.
+2. Double-click start_backend.bat. Keep its window open.
+3. Double-click start_frontend.bat. Keep its window open.
+4. Open exactly: http://127.0.0.1:8000
+   Avoid using localhost for this app because the frontend uses 127.0.0.1 for the API and login session cookies.
+
+If a Python dependency is missing, open PowerShell in this folder and run:
+  python -m pip install -r requirements.txt
+Then start both .bat files again.
+
+BACKEND PORT: 5000 (http://127.0.0.1:5000)
+Database/API health check: http://127.0.0.1:5000/health (database should say connected)
+FRONTEND PORT: 8000 (http://127.0.0.1:8000)
+
+LOGIN
+The login field accepts the registered name or email plus the password. The database schema is unchanged; the registered name is used as the username. If two accounts share the same name, log in with email instead.
+
+NEW FEATURE
+Month-over-Month Comparison compares selected month expenses with the previous month, by category, including percentage changes and largest increases/decreases.
+
+PRESERVED
+Existing transactions, transaction search/filter, CSV import, analytics, expense prediction, anomaly detection, avoidable-spending insights, PDF report, monthly budgets, savings goals, registration, and login are retained.
+
+TESTING LIMITATION
+Static syntax and route checks are included in UPDATE_NOTES.md. This package cannot verify your local MySQL server or the credentials in your .env file; test login and database-backed actions on your PC.
