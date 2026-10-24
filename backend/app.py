@@ -110,7 +110,7 @@ DB_PASSWORD = os.getenv(
 
 DB_NAME = os.getenv(
     "MYSQL_DATABASE",
-    "ai_personal_finance"
+    "financeflow"
 )
 
 DB_PORT = int(
@@ -2361,14 +2361,37 @@ def predict_expense():
                 "Please login first."
         }), 401
 
-    if model is None:
-
-        return jsonify({
-            "error":
-                "Prediction model is not available."
-        }), 500
-
     try:
+        # Cold-start: a user with no transactions should see a clear ₹0 prediction.
+        # This check happens before model availability so empty accounts still work
+        # even if the ML model cannot be loaded.
+        connection = get_db_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT COUNT(*) AS transaction_count FROM transactions WHERE user_id = %s",
+                    (user_id,)
+                )
+                transaction_row = cursor.fetchone() or {}
+                transaction_count = int(transaction_row.get("transaction_count") or 0)
+        finally:
+            connection.close()
+
+        if transaction_count == 0:
+            return jsonify({
+                "predicted_expense": 0.0,
+                "model_prediction": 0.0,
+                "personal_baseline": 0.0,
+                "history_months": 0,
+                "prediction_method": "No transactions yet — prediction is ₹0. Add transactions to personalize your forecast.",
+                "personalized": False,
+                "features": {}
+            }), 200
+
+        if model is None:
+            return jsonify({
+                "error": "Prediction model is not available."
+            }), 500
 
         data = request.get_json()
 
