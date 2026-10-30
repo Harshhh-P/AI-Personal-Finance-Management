@@ -1,14 +1,17 @@
 # ============================================================
 # FINANCEFLOW
 # AI PERSONAL FINANCE MANAGEMENT SYSTEM
-# BACKEND - FLASK + MYSQL + RANDOM FOREST
+# BACKEND - FLASK + NEON POSTGRESQL + RANDOM FOREST
 # ============================================================
 
 from flask import Flask, request, jsonify, session, make_response
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 
-import pymysql
+import psycopg
+from psycopg.rows import dict_row
+from psycopg import Cursor
+import re
 import pandas as pd
 import numpy as np
 import joblib
@@ -90,35 +93,74 @@ MODEL_METADATA_PATH = (
 
 
 # ============================================================
-# MYSQL CONFIGURATION
+# NEON POSTGRESQL CONFIGURATION
 # ============================================================
 
-DB_HOST = os.getenv(
-    "MYSQL_HOST",
-    "localhost"
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
-DB_USER = os.getenv(
-    "MYSQL_USER",
-    "root"
-)
 
-DB_PASSWORD = os.getenv(
-    "MYSQL_PASSWORD",
-    ""
-)
+# ============================================================
+# POSTGRESQL COMPATIBILITY CURSOR
+# ============================================================
 
-DB_NAME = os.getenv(
-    "MYSQL_DATABASE",
-    "financeflow"
-)
+class FinanceFlowCursor(Cursor):
+    """Small compatibility layer for the existing MySQL-oriented SQL."""
 
-DB_PORT = int(
-    os.getenv(
-        "MYSQL_PORT",
-        "3306"
-    )
-)
+    lastrowid = None
+
+    def execute(self, query, params=None, **kwargs):
+        self.lastrowid = None
+        sql = str(query)
+        sql = sql.replace('`', '')
+        sql = re.sub(
+            r"DATE_FORMAT\(\s*([^,]+?)\s*,\s*'%%Y-%%m-%%d'\s*\)",
+            r"TO_CHAR(\1, 'YYYY-MM-DD')", sql, flags=re.IGNORECASE
+        )
+        sql = re.sub(
+            r"DATE_FORMAT\(\s*([^,]+?)\s*,\s*'%%Y-%%m'\s*\)",
+            r"TO_CHAR(\1, 'YYYY-MM')", sql, flags=re.IGNORECASE
+        )
+        sql = re.sub(r"YEAR\(\s*([^()]+?)\s*\)", r"EXTRACT(YEAR FROM \1)::int", sql, flags=re.IGNORECASE)
+        sql = re.sub(
+            r"DATE_SUB\(\s*CURDATE\(\)\s*,\s*INTERVAL\s+6\s+MONTH\s*\)",
+            "(CURRENT_DATE - INTERVAL '6 months')", sql, flags=re.IGNORECASE
+        )
+        # MySQL's escaped percent signs were only needed by its DB driver.
+        sql = sql.replace('%%Y', '%%Y').replace('%%m', '%%m').replace('%%d', '%%d')
+        # PostgreSQL upsert equivalent for the budget uniqueness rule.
+        sql = re.sub(
+            r"ON DUPLICATE KEY UPDATE\s+amount\s*=\s*VALUES\(amount\)",
+            "ON CONFLICT (user_id, month, category) DO UPDATE SET amount = EXCLUDED.amount",
+            sql, flags=re.IGNORECASE
+        )
+        # The old code reads cursor.lastrowid after adding one transaction.
+        is_transaction_insert = bool(re.match(r"\s*INSERT\s+INTO\s+transactions\b", sql, re.IGNORECASE))
+        if is_transaction_insert and not re.search(r"\bRETURNING\b", sql, re.IGNORECASE):
+            sql = sql.rstrip().rstrip(';') + " RETURNING id"
+            super().execute(sql, params, **kwargs)
+            inserted = super().fetchone()
+            self.lastrowid = inserted.get('id') if inserted else None
+            return self
+        return super().execute(sql, params, **kwargs)
+
+    @staticmethod
+    def _normalize(row):
+        if not isinstance(row, dict):
+            return row
+        result = dict(row)
+        for lower, upper in (
+            ('date', 'Date'), ('type', 'Type'), ('amount', 'Amount'),
+            ('category', 'Category'), ('description', 'Description')
+        ):
+            if lower in result and upper not in result:
+                result[upper] = result[lower]
+        return result
+
+    def fetchone(self):
+        return self._normalize(super().fetchone())
+
+    def fetchall(self):
+        return [self._normalize(row) for row in super().fetchall()]
 
 
 # ============================================================
@@ -126,14 +168,15 @@ DB_PORT = int(
 # ============================================================
 
 def get_db_connection():
-
-    return pymysql.connect(
-        host=DB_HOST,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        database=DB_NAME,
-        port=DB_PORT,
-        cursorclass=pymysql.cursors.DictCursor,
+    if not DATABASE_URL:
+        raise RuntimeError(
+            "DATABASE_URL is missing. Add your Neon PostgreSQL pooled connection string "
+            "to the environment variables."
+        )
+    return psycopg.connect(
+        DATABASE_URL,
+        row_factory=dict_row,
+        cursor_factory=FinanceFlowCursor,
         autocommit=True
     )
 
@@ -276,7 +319,7 @@ def health_check():
             "status": "degraded",
             "api": "running",
             "database": "disconnected",
-            "message": "Check that MySQL is running and the MYSQL_* values in your existing .env file are correct."
+            "message": "Check that DATABASE_URL contains your Neon PostgreSQL connection string."
         }), 503
 
 
@@ -2665,30 +2708,30 @@ def internal_error(error):
 def ensure_planning_tables(cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS financeflow_budgets (
-            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
+            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             month CHAR(7) NOT NULL,
             category VARCHAR(80) NOT NULL,
-            amount DECIMAL(12,2) NOT NULL,
+            amount NUMERIC(12,2) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_user_month_category (user_id, month, category),
-            INDEX idx_budget_user_month (user_id, month)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT unique_user_month_category UNIQUE (user_id, month, category)
+        )
     """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_budget_user_month ON financeflow_budgets (user_id, month)")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS financeflow_savings_goals (
-            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
+            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             name VARCHAR(120) NOT NULL,
-            target_amount DECIMAL(12,2) NOT NULL,
-            current_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+            target_amount NUMERIC(12,2) NOT NULL,
+            current_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
             target_date DATE NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX idx_goal_user (user_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
     """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_goal_user ON financeflow_savings_goals (user_id)")
 
 
 @app.route("/planning/budgets", methods=["GET"])
@@ -2928,7 +2971,7 @@ if __name__ == "__main__":
         f" Model loaded: {model is not None}"
     )
     print(
-        f" Database: {DB_NAME}"
+        f"Database: financeflow (Neon PostgreSQL)"
     )
     print(
         " Server: http://127.0.0.1:5000"

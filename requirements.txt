@@ -1,9 +1,10 @@
 Flask
-flask-cors
-joblib
-scikit-learn
+Flask-Cors
+psycopg[binary]
 pandas
 numpy
-PyMySQL
+joblib
 python-dotenv
 reportlab
+gunicorn
+scikit-learn

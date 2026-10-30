@@ -1,0 +1,10 @@
+Flask
+Flask-Cors
+psycopg[binary]
+pandas
+numpy
+joblib
+python-dotenv
+reportlab
+gunicorn
+scikit-learn
