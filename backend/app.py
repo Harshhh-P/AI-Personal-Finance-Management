@@ -52,6 +52,15 @@ app.secret_key = os.getenv(
     "financeflow-secret-key-change-this"
 )
 
+app.config.update(
+    SESSION_COOKIE_SAMESITE=os.getenv(
+        "SESSION_COOKIE_SAMESITE", "Lax"
+    ),
+    SESSION_COOKIE_SECURE=os.getenv(
+        "SESSION_COOKIE_SECURE", "false"
+    ).lower() == "true"
+)
+
 CORS(
     app,
     supports_credentials=True,
@@ -61,7 +70,8 @@ CORS(
         "http://127.0.0.1:5501",
         "http://localhost:5501",
         "http://127.0.0.1:8000",
-        "http://localhost:8000"
+        "http://localhost:8000",
+        "https://financeflow-pi-lyart.vercel.app"
     ]
 )
 
