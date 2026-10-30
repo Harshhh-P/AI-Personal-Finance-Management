@@ -3,7 +3,7 @@
 // AI PERSONAL FINANCE MANAGEMENT SYSTEM
 // ============================================================
 
-const API_URL = "http://127.0.0.1:5000";
+const API_URL = "https://financeflow-api-4f3i.onrender.com";
 
 
 // ============================================================
