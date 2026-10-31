@@ -52,13 +52,20 @@ app.secret_key = os.getenv(
     "financeflow-secret-key-change-this"
 )
 
+same_site = os.getenv(
+    "SESSION_COOKIE_SAMESITE", "Lax"
+).strip().title()
+
+if same_site not in ("Strict", "Lax", "None"):
+    same_site = "Lax"
+
+secure_cookie = os.getenv(
+    "SESSION_COOKIE_SECURE", "false"
+).strip().lower() == "true"
+
 app.config.update(
-    SESSION_COOKIE_SAMESITE=os.getenv(
-        "SESSION_COOKIE_SAMESITE", "Lax"
-    ),
-    SESSION_COOKIE_SECURE=os.getenv(
-        "SESSION_COOKIE_SECURE", "false"
-    ).lower() == "true"
+    SESSION_COOKIE_SAMESITE=same_site,
+    SESSION_COOKIE_SECURE=secure_cookie
 )
 
 CORS(
